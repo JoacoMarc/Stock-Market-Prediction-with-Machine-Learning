@@ -31,16 +31,11 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
     
     cache_key = f"{stockSymbol}_{days_back}"
     
-    # Debug: mostrar estado del cache
-    print(f"🔍 Cache key: {cache_key}")
-    print(f"🔍 Cache keys existentes: {list(_bulk_news_cache.keys())}")
     
     # Si ya tenemos las noticias en cache, devolverlas
     if cache_key in _bulk_news_cache:
-        print(f"📦 Usando cache para {cache_key}")
         return _bulk_news_cache[cache_key]
-    
-    print(f"🌐 Haciendo nueva llamada a la API para {cache_key}")
+
     current_date = pd.Timestamp.now()
     from_date = (current_date - pd.Timedelta(days=days_back)).strftime('%Y-%m-%d')
     to_date = (current_date - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
@@ -55,7 +50,7 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
     # Dominios financieros confiables
     financial_domains = "reuters.com,bloomberg.com,marketwatch.com,cnbc.com,finance.yahoo.com,wsj.com,ft.com,nasdaq.com"
     
-    url = f"https://newsapi.org/v2/everything?q={search_term}&apiKey=74bd02775bbe4b4a801ee1e8b5dbc8dd&language=en&from={from_date}&to={to_date}&domains={financial_domains}&sortBy=relevancy&pageSize=50"
+    url = f"https://newsapi.org/v2/everything?q={search_term}&apiKey=74bd02775bbe4b4a801ee1e8b5dbc8dd&language=en&from={from_date}&to={to_date}&domains={financial_domains}&sortBy=relevancy&pageSize=100"
     
     print(f"🔄 Obteniendo noticias para {stockSymbol} de los últimos {days_back} días...")
     news = get_news(url)
@@ -69,7 +64,6 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
             top_k=None  
         )
         
-        relevant_count = 0
         for article in news.get("articles", []):
             try:
                 published_date = article.get('publishedAt', '')
@@ -90,37 +84,31 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
                     symbol_lower = stockSymbol.lower()
                     name_lower = stockName.lower() if stockName else ""
                     
-                    # El artículo debe mencionar el símbolo o nombre de la empresa
-                    is_relevant = (symbol_lower in title_lower or symbol_lower in content_lower or 
-                                 (name_lower and (name_lower in title_lower or name_lower in content_lower)))
+                
+                
+                    # Analizar sentimiento
+                    text_to_analyze = f"{title} {content}"[:512]
+                    sentiment_results = sentiment_analyzer(text_to_analyze)
                     
-                    if is_relevant:
-                        relevant_count += 1
-                        # Analizar sentimiento
-                        text_to_analyze = f"{title} {content}"[:512]
-                        sentiment_results = sentiment_analyzer(text_to_analyze)
-                        
-                        main_prediction = max(sentiment_results[0], key=lambda x: x['score'])
-                        
-                        sentiment_data = {
-                            'source': source,
-                            'sentiment': main_prediction['label'],
-                            'confidence': main_prediction['score'],
-                            'positive_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'positive'), 0),
-                            'negative_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'negative'), 0),
-                            'neutral_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'neutral'), 0),
-                            'title': title
-                        }
-                        
-                        # Agrupar por fecha
-                        if article_date not in news_by_date:
-                            news_by_date[article_date] = []
-                        news_by_date[article_date].append(sentiment_data)
-                        
+                    main_prediction = max(sentiment_results[0], key=lambda x: x['score'])
+                    
+                    sentiment_data = {
+                        'source': source,
+                        'sentiment': main_prediction['label'],
+                        'confidence': main_prediction['score'],
+                        'positive_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'positive'), 0),
+                        'negative_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'negative'), 0),
+                        'neutral_score': next((s['score'] for s in sentiment_results[0] if s['label'] == 'neutral'), 0),
+                        'title': title
+                    }
+                    
+                    # Agrupar por fecha
+                    if article_date not in news_by_date:
+                        news_by_date[article_date] = []
+                    news_by_date[article_date].append(sentiment_data)
+                    
             except Exception as e:
                 continue
-        
-        print(f"📊 Artículos relevantes procesados: {relevant_count}")
         print(f"📅 Fechas con noticias: {list(news_by_date.keys())}")
     else:
         print("❌ La API no devolvió noticias")

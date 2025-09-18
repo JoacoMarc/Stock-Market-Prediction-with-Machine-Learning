@@ -48,9 +48,10 @@ if not predictions.empty:
         'Importance': model.feature_importances_
     }).sort_values('Importance', ascending=False)
     
-    print(f"\n🏆 Top predictores:")
-    for i, row in feature_importance.iterrows():
-        print(f"  {row['Feature']}: {row['Importance']:.40f}")
+    #head de 5 predictores
+    print(f"\n🏆 Top 5 predictores:")
+    print(feature_importance.head(5).to_string(index=False))
+
 else:
     print("❌ No se pudieron generar predicciones")
 
