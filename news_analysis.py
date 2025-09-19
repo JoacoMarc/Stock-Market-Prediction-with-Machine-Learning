@@ -5,11 +5,48 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 
+import requests
+from transformers import pipeline
+import pandas as pd
+import logging
+import warnings
+from datetime import datetime, timedelta
+
 # Suprimir warnings y mensajes verbosos
 warnings.filterwarnings("ignore")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 import os
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
+# Función simple para cargar archivo .env
+def load_env():
+    """Carga variables de entorno desde archivo .env"""
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        os.environ[key.strip()] = value.strip()
+    except Exception as e:
+        pass  # Silenciar errores si no existe el archivo
+
+# Cargar variables de entorno
+load_env()
+
+# Cargar configuración desde variables de entorno
+NEWS_API_KEY = os.getenv('NEWS_API_KEY', 'your_news_api_key_here')
+NEWS_API_BASE_URL = os.getenv('NEWS_API_BASE_URL', 'https://newsapi.org/v2/everything')
+NEWS_API_LANGUAGE = os.getenv('NEWS_API_LANGUAGE', 'en')
+NEWS_API_SORT_BY = os.getenv('NEWS_API_SORT_BY', 'relevancy')
+
+# Validar que la API key esté configurada
+if NEWS_API_KEY == 'your_news_api_key_here':
+    print("⚠️  ADVERTENCIA: NEWS_API_KEY no configurada en archivo .env")
+    print("   Para obtener análisis de sentimientos completo, configura tu API key de NewsAPI")
+    print("   Visita: https://newsapi.org/register")
 
 # Cache global para evitar requests duplicadas
 _sentiment_cache = {}
@@ -50,7 +87,8 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
     # Dominios financieros confiables
     financial_domains = "reuters.com,bloomberg.com,marketwatch.com,cnbc.com,finance.yahoo.com,wsj.com,ft.com,nasdaq.com"
     
-    url = f"https://newsapi.org/v2/everything?q={search_term}&apiKey=74bd02775bbe4b4a801ee1e8b5dbc8dd&language=en&from={from_date}&to={to_date}&domains={financial_domains}&sortBy=relevancy&pageSize=100"
+    # Construir URL usando variables de entorno
+    url = f"{NEWS_API_BASE_URL}?q={search_term}&apiKey={NEWS_API_KEY}&language={NEWS_API_LANGUAGE}&from={from_date}&to={to_date}&domains={financial_domains}&sortBy={NEWS_API_SORT_BY}&pageSize=100"
     
     print(f"🔄 Obteniendo noticias para {stockSymbol} de los últimos {days_back} días...")
     news = get_news(url)
@@ -109,7 +147,6 @@ def get_bulk_news_for_period(stockSymbol, stockName=None, days_back=30):
                     
             except Exception as e:
                 continue
-        print(f"📅 Fechas con noticias: {list(news_by_date.keys())}")
     else:
         print("❌ La API no devolvió noticias")
     

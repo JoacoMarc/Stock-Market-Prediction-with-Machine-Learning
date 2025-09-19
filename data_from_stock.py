@@ -3,11 +3,6 @@ from news_analysis import sentiment_analysis
 import pandas as pd
 import numpy as np
 
-def getDataFromStock(stockSymbol, period):
-    stock= yf.Ticker(stockSymbol)
-    stockData = stock.history(period=period) 
-    return stockData
-
 
 def add_advanced_technical_indicators(stockData):
     """

@@ -50,3 +50,19 @@ Thumbs.db
 # Data files (optional - puedes comentar si quieres versionar los CSVs)
 # *.csv
 # *.xlsx
+
+# Project specific
+predictions.csv
+*.log
+cache/
+temp/
+
+# API Keys and sensitive configuration
+.env.local
+.env.production
+config/secrets.py
+
+# Model files (si son muy grandes)
+# *.pkl
+# *.joblib
+# models/

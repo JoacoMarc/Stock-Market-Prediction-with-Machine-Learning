@@ -74,7 +74,7 @@ def predict_with_sentiment(train, test, predictors, model, stockSymbol, stockNam
     
     try:
         preds = model.predict_proba(test_with_updated_sentiment[predictors])[:, 1]
-        preds = [1 if x >= 0.6 else 0 for x in preds]
+        preds = [1 if x >= 0.5 else 0 for x in preds]
         preds = pd.Series(preds, index=test.index, name="Predictions")
         combined = pd.concat([test["Target"], preds], axis=1)
         return combined
